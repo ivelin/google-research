@@ -389,13 +389,13 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe')
     )
 
-    logging.debug(
-        f">>>> _get_full_feature_dict... actions count: {len(actions)}")
+    # logging.debug(
+    #     f">>>> _get_full_feature_dict... actions count: {len(actions)}")
 
-    logging.debug(
-        f">>>> _get_full_feature_dict... _FILTER_ACTIONS_BY_NAME: {_FILTER_ACTIONS_BY_NAME}")
-    logging.debug(
-        f">>>> _get_full_feature_dict... _FILTER_ACTION_BY_TYPE: {_FILTER_ACTION_BY_TYPE}")
+    # logging.debug(
+    #     f">>>> _get_full_feature_dict... _FILTER_ACTIONS_BY_NAME: {_FILTER_ACTIONS_BY_NAME}")
+    # logging.debug(
+    #     f">>>> _get_full_feature_dict... _FILTER_ACTION_BY_TYPE: {_FILTER_ACTION_BY_TYPE}")
 
     if actions and _FILTER_ACTIONS_BY_NAME:
         actions = _filter_synthetic_by_name_overlap(
@@ -407,14 +407,14 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         actions = _filter_synthetic_by_obj_type(
             ui_obj_list, actions, max_num_syn_per_screen=20)
 
-    logging.debug(
-        f">>>> _get_full_feature_dict... filtered actions count: {len(actions)}")
+    # logging.debug(
+    #     f">>>> _get_full_feature_dict... filtered actions count: {len(actions)}")
 
     padded_syn_feature_dict = synthetic_action_generator.get_synthetic_feature_dict(
         actions, max_word_num, max_word_length)
 
-    logging.debug(
-        f">>>> _get_full_feature_dict... padded_syn_feature_dict: {padded_syn_feature_dict}")
+    # logging.debug(
+    #     f">>>> _get_full_feature_dict... padded_syn_feature_dict: {padded_syn_feature_dict}")
 
     full_feature = {}
     full_feature.update(padded_obj_feature_dict)
@@ -432,8 +432,8 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
     full_feature['ui_obj_cord_y_seq'] = full_feature['ui_obj_cord_y_seq'] / float(
         screen_height)
 
-    logging.debug(
-        f">>>> _get_full_feature_dict... returning full_feature: {full_feature}")
+    # logging.debug(
+    #     f">>>> _get_full_feature_dict... returning full_feature: {full_feature}")
     return full_feature
 
 
@@ -644,7 +644,7 @@ def main(_):
                 dist = '%s: %s\n'.format(key, sorted(
                     distribution.items(), key=operator.itemgetter(0)))
                 writer.write(dist)
-                logging.debug(f'wrote dist record to {stats_file}: {dist}')
+                # logging.debug(f'wrote dist record to {stats_file}: {dist}')
 
             logging.debug(
                 f'\n >>>>>>> Writing to: {stats_file} sums: {sums.items()} \n')
@@ -652,8 +652,8 @@ def main(_):
                 sums_lines = '%s: %s\n'.format(key, sorted(
                     sums.items(), key=operator.itemgetter(0)))
                 writer.write(sums_lines)
-                logging.debug(
-                    f'wrote sum record to {stats_file}: sums len: {len(sums_lines)}')
+                # logging.debug(
+                #     f'wrote sum record to {stats_file}: sums len: {len(sums_lines)}')
         logging.debug(f'\n >>>>>>> Finished writing to: {stats_file}\n')
 
 

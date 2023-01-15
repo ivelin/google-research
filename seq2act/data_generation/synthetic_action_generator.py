@@ -973,8 +973,8 @@ def get_synthetic_feature_dict(synthetic_action_list,
                     action.step_str_pos[1])
                 feature['step_str_position_seq'].extend(step_token_pos)
 
-        logging.debug(
-            f"get_synthetic_feature_dict... feature: {feature}")
+        # logging.debug(
+            # f"get_synthetic_feature_dict... feature: {feature}")
 
         for key in feature:
             # https://www.golinuxcloud.com/setting-an-array-element-with-a-sequence/
@@ -991,15 +991,15 @@ def get_synthetic_feature_dict(synthetic_action_list,
             'input_str_position_seq': [(phrase_count * 2), np.int64, 0],
             'obj_desc_position_seq': [(phrase_count * 2), np.int64, 0],
         }
-        logging.debug(
-            f"get_synthetic_feature_dict... parse_consumed: {parse_consumed}")
+        # logging.debug(
+        #     f"get_synthetic_feature_dict... parse_consumed: {parse_consumed}")
         if parse_consumed:
             feature_padding_info['consumed_tag'] = [
                 (phrase_count), np.int64, 0]
             feature_padding_info['step_str_position_seq'] = [(phrase_count * 2),
                                                              np.int64, 0]
-        logging.debug(
-            f"get_synthetic_feature_dict... feature_padding_info: {feature_padding_info}")
+        # logging.debug(
+        #     f"get_synthetic_feature_dict... feature_padding_info: {feature_padding_info}")
 
         padding_shape, padding_type, padding_value = {}, {}, {}
         for key in feature_padding_info:
@@ -1008,8 +1008,8 @@ def get_synthetic_feature_dict(synthetic_action_list,
             padding_type[key] = pad_type
             padding_value[key] = value
 
-        logging.debug(
-            f"get_synthetic_feature_dict... feature, padding_shape, padding_type: {feature}, {padding_shape}, {padding_type}")
+        # logging.debug(
+            # f"get_synthetic_feature_dict... feature, padding_shape, padding_type: {feature}, {padding_shape}, {padding_type}")
 
         padded_feature_dict = proto_utils.padding_dictionary(feature, padding_shape,
                                                              padding_type,
