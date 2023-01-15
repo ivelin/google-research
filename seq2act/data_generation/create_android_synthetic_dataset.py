@@ -582,7 +582,7 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
             f"all_file_path, len: {all_file_path}, {len(all_file_path)}")
         assert len(all_file_path) == 24598
 
-        for file_path in sorted(all_file_path)[:10]:
+        for file_path in sorted(all_file_path):
             # TODO run through all files when bugs fixed
             #        for file_path in [all_file_path[0], all_file_path[1]]:
             shard = num_processed_files % FLAGS.num_shards
