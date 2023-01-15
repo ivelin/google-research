@@ -18,3 +18,12 @@ dist/
 
 # Other
 *.DS_Store
+
+# py env
+pyvenv.cfg
+
+# 3rd party runtime libs
+lib/
+include/
+share/
+bin/
