@@ -30,7 +30,7 @@ import collections
 import operator
 import os
 import threading
-
+import logging
 import concurrent.futures
 import numpy as np
 import tensorflow.compat.v1 as tf  # tf
@@ -52,7 +52,7 @@ _INPUT_DIR = '/tmp/input'
 _OUTPUT_DIR = '/tmp/'
 _FILTER_FILE = '/tmp/'
 
-_NUM_THREADS_DEFAULT = 10
+_NUM_THREADS_DEFAULT = 1
 _PADDING_DIMENSIONS_FILE_NAME = 'padding_dimensions.txt'
 _TOKEN_TYPE = 'subtoken'
 _NUM_SHARDS_DEFAULT = config.SHARD_NUM
@@ -161,8 +161,8 @@ def _get_data_dimensions(input_dir):
                                          max_word_num_one_file)
             max_word_length_all_files = max(max_word_length_all_files,
                                             max_word_length_one_file)
-    tf.logging.info('max_word_num_all_files=%d, max_word_length_all_files=%d',
-                    max_word_num_all_files, max_word_length_all_files)
+    logging.info('max_word_num_all_files=%d, max_word_length_all_files=%d',
+                 max_word_num_all_files, max_word_length_all_files)
 
     return max_word_num_all_files, max_word_length_all_files
 
@@ -185,7 +185,7 @@ def _process_dimensions(input_dir, output_dir):
       max_word_num: The max number of words for building model features.
       max_word_length: The max length of words for building model features.
     """
-    tf.logging.info('Processing data dimensions...')
+    logging.info('Processing data dimensions...')
     max_word_num, max_word_length = _get_data_dimensions(input_dir)
 
     # Apply pre-configured upper bound to clip possibly rare outlier values.
@@ -365,7 +365,7 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
             np int array, shape = (phrase_count*2,)
       }
     """
-    tf.logging.debug(
+    logging.debug(
         f">>>> _get_full_feature_dict from file_path: {file_path}")
 
     view_hierarchy_leaf_nodes = common.get_view_hierarchy_list(file_path)
@@ -373,7 +373,7 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
 
     ui_object_num = len(view_hierarchy_leaf_nodes)
 
-    tf.logging.debug(
+    logging.debug(
         f">>>> _get_full_feature_dict ui_object_num: {ui_object_num}")
 
     padded_obj_feature_dict = proto_utils.get_ui_objects_feature_dict(
@@ -381,16 +381,22 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         padding_shape=(ui_object_num, max_word_num, max_word_length),
         lower_case=True)
 
-    tf.logging.debug(
+    logging.debug(
         f">>>> _get_full_feature_dict padded_obj_feature_dict: {padded_obj_feature_dict}")
 
     actions = synthetic_action_generator.generate_all_actions(
         view_hierarchy_leaf_nodes,
-        # action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe')
+        action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe')
     )
 
-    tf.logging.debug(
+    logging.debug(
         f">>>> _get_full_feature_dict... actions count: {len(actions)}")
+
+    logging.debug(
+        f">>>> _get_full_feature_dict... _FILTER_ACTIONS_BY_NAME: {_FILTER_ACTIONS_BY_NAME}")
+    logging.debug(
+        f">>>> _get_full_feature_dict... _FILTER_ACTION_BY_TYPE: {_FILTER_ACTION_BY_TYPE}")
+
     if actions and _FILTER_ACTIONS_BY_NAME:
         actions = _filter_synthetic_by_name_overlap(
             actions,
@@ -401,8 +407,15 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         actions = _filter_synthetic_by_obj_type(
             ui_obj_list, actions, max_num_syn_per_screen=20)
 
+    logging.debug(
+        f">>>> _get_full_feature_dict... filtered actions count: {len(actions)}")
+
     padded_syn_feature_dict = synthetic_action_generator.get_synthetic_feature_dict(
         actions, max_word_num, max_word_length)
+
+    logging.debug(
+        f">>>> _get_full_feature_dict... padded_syn_feature_dict: {padded_syn_feature_dict}")
+
     full_feature = {}
     full_feature.update(padded_obj_feature_dict)
     full_feature.update(padded_syn_feature_dict)
@@ -419,7 +432,7 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
     full_feature['ui_obj_cord_y_seq'] = full_feature['ui_obj_cord_y_seq'] / float(
         screen_height)
 
-    tf.logging.debug(
+    logging.debug(
         f">>>> _get_full_feature_dict... returning full_feature: {full_feature}")
     return full_feature
 
@@ -433,7 +446,7 @@ def _assert_feature_value(feature):
         if key in anchor_features:
             continue
         if -1 in feature[key]:
-            tf.logging.info('[FATAL]: Feature %d contains -1', key)
+            logging.info('[FATAL]: Feature %d contains -1', key)
             return False
     return True
 
@@ -445,8 +458,8 @@ def _assert_feature_shape(feature, expected_shape):
         sorted(feature.keys()), sorted(expected_shape.keys()))
     for key in feature:
         if feature[key].shape != expected_shape[key]:
-            tf.logging.info('[FATAL] feature %s shape is different from expected',
-                            key)
+            logging.info('[FATAL] feature %s shape is different from expected',
+                         key)
             return False
     return True
 
@@ -475,14 +488,14 @@ def _process_features(tf_record_writer, writer_lock,
       max_word_length: The max length of words in each ui object. synthetic input
         actions.
     """
-    # tf.logging.info(f">>>> Processing features for {file_path}")
+    # logging.info(f">>>> Processing features for {file_path}")
     feature_dict = _get_full_feature_dict(
         dataset_type,
         file_path,
         max_word_num,
         max_word_length,
     )
-    tf.logging.info(
+    logging.info(
         f">>>> Processing features... feature_dict: {feature_dict}")
 
     phrase_count = feature_dict['instruction_str'].shape[0]
@@ -518,7 +531,7 @@ def _process_features(tf_record_writer, writer_lock,
     _stat_distribution('target_obj_type',
                        feature_dict['ui_obj_type_id_seq'][target_objs])
 
-    tf.logging.info(
+    logging.info(
         f">>>> Processed features into feature_dict {feature_dict}")
     # When feature_dict['verb_id_seq'] is not always padded value, generate
     # tfexample
@@ -527,7 +540,7 @@ def _process_features(tf_record_writer, writer_lock,
         not np.array(feature_dict['verb_id_seq'] ==
                      config.LABEL_DEFAULT_INVALID_INT).all()):
         tf_proto = proto_utils.features_to_tf_example(feature_dict)
-        tf.logging.info(f">>>> Writing to tfrecord: {feature_dict}")
+        logging.info(f">>>> Writing to tfrecord: {feature_dict}")
         with writer_lock:
             tf_record_writer.write(tf_proto.SerializeToString())
 
@@ -544,7 +557,7 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
       max_word_length: The max length of words in each ui object. synthetic input
         actions.
     """
-    tf.logging.info('Processing data features...')
+    logging.info('Processing data features...')
     tf_record_writers = []
     writer_locks = []
     for shard in range(FLAGS.num_shards):
@@ -560,12 +573,12 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
     with concurrent.futures.ThreadPoolExecutor(FLAGS.num_threads) as executor:
         futures = []
         input_dir = "gs://pix2struct/pix2struct_data/data/rico_images"
-        tf.logging.info(f"Data files input dir:: {input_dir}")
+        logging.info(f"Data files input dir:: {input_dir}")
         all_file_path = gfile.Glob(os.path.join(input_dir, '*.xml')) + gfile.Glob(
             os.path.join(input_dir, '*.json'))
 
         all_file_path = filter_file_by_name(all_file_path)
-        tf.logging.info(
+        logging.info(
             f"all_file_path, len: {all_file_path}, {len(all_file_path)}")
         assert len(all_file_path) == 24598
 
@@ -573,16 +586,16 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
             # TODO run through all files when bugs fixed
             #        for file_path in [all_file_path[0], all_file_path[1]]:
             shard = num_processed_files % FLAGS.num_shards
-            # tf.logging.info("\n\n>>>>>> Appending features: %s",
+            # logging.info("\n\n>>>>>> Appending features: %s",
             #                 _process_features)
             futures.append(
                 executor.submit(_process_features, tf_record_writers[shard],
                                 writer_locks[shard], dataset_type, file_path,
                                 max_word_num, max_word_length))
             num_processed_files += 1
-        tf.logging.info(">>>> Waiting on thread pool to finish")
+        logging.info(">>>> Waiting on thread pool to finish")
         concurrent.futures.wait(futures)
-        tf.logging.info(">>>> Thread pool execytuib finished")
+        logging.info(">>>> Thread pool execytuib finished")
 
     for shard in range(FLAGS.num_shards):
         tf_record_writers[shard].close()
@@ -621,27 +634,27 @@ def create_dataset(dataset_type, input_dir, output_dir):
 def main(_):
     create_dataset(FLAGS.dataset, FLAGS.input_dir, FLAGS.output_dir)
 
-    tf.logging.info('\n\n%s\n\n', longest_stats)
+    logging.info('\n\n%s\n\n', longest_stats)
     stats_file = os.path.join(FLAGS.output_dir, 'stats.txt')
     if FLAGS.file_to_generate == 'tf_example':
         with open(stats_file, 'w+') as writer:
-            print(
+            logging.debug(
                 f'\n >>>>>>> Writing to: {stats_file} distributions: {distributions.items()} \n')
             for key, distribution in distributions.items():
                 dist = '%s: %s\n'.format(key, sorted(
                     distribution.items(), key=operator.itemgetter(0)))
                 writer.write(dist)
-                prtint(f'wrote dist record to {stats_file}: {dist}')
+                logging.debug(f'wrote dist record to {stats_file}: {dist}')
 
-            tf.logging.debug(
+            logging.debug(
                 f'\n >>>>>>> Writing to: {stats_file} sums: {sums.items()} \n')
             for key, distribution in sums.items():
                 sums_lines = '%s: %s\n'.format(key, sorted(
                     sums.items(), key=operator.itemgetter(0)))
                 writer.write(sums_lines)
-                tf.logging.debug(
+                logging.debug(
                     f'wrote sum record to {stats_file}: sums len: {len(sums_lines)}')
-        tf.logging.debug(f'\n >>>>>>> Finished writing to: {stats_file}\n')
+        logging.debug(f'\n >>>>>>> Finished writing to: {stats_file}\n')
 
 
 if __name__ == '__main__':

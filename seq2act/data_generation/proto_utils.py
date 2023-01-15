@@ -225,6 +225,7 @@ def _get_ui_object_attributes(view_hierarchy_leaf_nodes, lower_case=False):
 
     def _is_ascii(s):
         return all(ord(c) < 128 for c in s)
+
     try:
         for vh_node in view_hierarchy_leaf_nodes:
             ui_obj = vh_node.uiobject
@@ -246,23 +247,48 @@ def _get_ui_object_attributes(view_hierarchy_leaf_nodes, lower_case=False):
             word_ids, char_ids = string_utils.tokenize_to_ids(word_sequence)
             word_id_sequence.append(word_ids)
             char_id_sequence.append(char_ids)
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... word_sequence: {word_sequence}")
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... type_sequence: {np.array(type_sequence)})")
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... word_id_sequence: {np.array(word_id_sequence)}")
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... clickable_sequence: {np.array(clickable_sequence)}")
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... cord_x_sequence: {np.array(cord_x_sequence)}")
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... cord_y_sequence: {np.array(cord_y_sequence)}")
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... dom_location_sequence: {np.array(dom_location_sequence)}")
+
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... obj_str_sequence: {np.array(obj_str_sequence)}")
+
+            ui_feature = {
+                'type_id_seq': np.array(type_sequence),
+                'word_id_seq': np.array(word_id_sequence),
+                'clickable_seq': np.array(clickable_sequence),
+                'cord_x_seq': np.array(cord_x_sequence),
+                'cord_y_seq': np.array(cord_y_sequence),
+                'dom_location_seq': np.array(dom_location_sequence),
+                'obj_str_seq': np.array(obj_str_sequence, dtype=str),
+            }
+
+            tf.logging.debug(
+                f">>>> _get_ui_object_attributes... ui_feature:{ui_feature}")
+
+            return ui_feature
     except Exception as e:
         tf.logging.error(f">>>> !!!!! ERROR: {e}")
-
-    ui_feature = {
-        'type_id_seq': np.array(type_sequence),
-        'word_id_seq': np.array(word_id_sequence),
-        'clickable_seq': np.array(clickable_sequence),
-        'cord_x_seq': np.array(cord_x_sequence),
-        'cord_y_seq': np.array(cord_y_sequence),
-        'dom_location_seq': np.array(dom_location_sequence),
-        'obj_str_seq': np.array(obj_str_sequence, dtype=str),
-    }
-
-    tf.logging.debug(
-        f">>>> _get_ui_object_attributes... ui_feature:{ui_feature}")
-
-    return ui_feature
+        raise e
 
 
 def get_view_hierarchy_leaf_relation(view_hierarchy_leaf_nodes):

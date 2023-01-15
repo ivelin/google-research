@@ -98,6 +98,8 @@ from enum import Enum
 import numpy as np
 import tensorflow.compat.v1 as tf
 
+import logging
+
 from seq2act.data_generation import common
 from seq2act.data_generation import config
 from seq2act.data_generation import proto_utils
@@ -187,7 +189,7 @@ def generate_all_actions(view_hierarchy_leaf_nodes, action_rules=('all')):
     Returns:
       A list of common.Action instances.
     """
-    tf.logging.info(
+    logging.info(
         f"generate_all_actions view_hierarchy_leaf_nodes: {view_hierarchy_leaf_nodes}, action_rules: {action_rules}")
     ui_object_list = [ele.uiobject for ele in view_hierarchy_leaf_nodes]
     vh_relation = proto_utils.get_view_hierarchy_leaf_relation(
@@ -297,7 +299,7 @@ def _generate_single_object_actions(ui_object_list, platform=Platform.ANDROID):
     action_list = []
     for object_index, ui_object in enumerate(ui_object_list):
         if hasattr(ui_object, 'bounding_box'):
-            tf.logging.info('ui_object.bounding_box: %s', [
+            logging.info('ui_object.bounding_box: %s', [
                 ui_object.bounding_box.x1, ui_object.bounding_box.y1,
                 ui_object.bounding_box.x2, ui_object.bounding_box.y2
             ])
@@ -797,8 +799,8 @@ def _fill_action_info(action):
         return all(ord(c) < 128 for c in s)
 
     if not _is_ascii(action.obj_desc_str):
-        tf.logging.info('Found an unconvertable unicode %s',
-                        action.obj_desc_str)
+        logging.info('Found an unconvertable unicode %s',
+                     action.obj_desc_str)
         return
 
     if not (isinstance(action.verb_str, str) and isinstance(
@@ -913,88 +915,106 @@ def get_synthetic_feature_dict(synthetic_action_list,
     Returns:
       a padded feature dictionary
     """
-    feature = {
-        'instruction_str': [],
-        'instruction_rule_id': [],
-        'instruction_word_id_seq': [],
-        'verb_id_seq': [],
-        'ui_target_id_seq': [],
-        'verb_str_position_seq': [],
-        'input_str_position_seq': [],
-        'obj_desc_position_seq': [],
-    }
-    if parse_consumed:
-        feature['consumed_tag'] = []
-        feature['step_str_position_seq'] = []
 
-    for action in synthetic_action_list:
-        if not action.is_valid():
-            continue
-        action.convert_to_lower_case()
-        word_id_seq, char_id_seq = string_utils.tokenize_to_ids(
-            action.instruction_str)
-        # skips the synthetic actions that have more than max_word_num tokens
-        if len(word_id_seq) > max_word_num:
-            tf.logging.info('[Dropped Long Synthetic Action]:%s',
-                            action.instruction_str)
-            continue
-        feature['instruction_str'].append(action.instruction_str)
-        feature['instruction_rule_id'].append(action.action_rule.value)
-        feature['instruction_word_id_seq'].append(word_id_seq)
-        # Enable this when using word token
-        if 'instruction_char_id_seq' in feature:
-            feature['instruction_char_id_seq'].append(char_id_seq)
-        feature['verb_id_seq'].append(action.action_type.value)
-        feature['ui_target_id_seq'].append(action.target_obj_idx)
-        feature['verb_str_position_seq'].extend(
-            string_utils.get_token_pos_from_char_pos(action.instruction_str,
-                                                     action.verb_str_pos[0],
-                                                     action.verb_str_pos[1]))
-        feature['obj_desc_position_seq'].extend(
-            string_utils.get_token_pos_from_char_pos(action.instruction_str,
-                                                     action.obj_str_pos[0],
-                                                     action.obj_str_pos[1]))
-        if action.has_valid_input():
-            feature['input_str_position_seq'].extend(
-                string_utils.get_token_pos_from_char_pos(action.instruction_str,
-                                                         action.input_str_pos[0],
-                                                         action.input_str_pos[1]))
-        else:
-            feature['input_str_position_seq'].extend(action.input_str_pos)
+    logging.debug("get_synthetic_feature_dict...")
+    try:
+        feature = {
+            'instruction_str': [],
+            'instruction_rule_id': [],
+            'instruction_word_id_seq': [],
+            'verb_id_seq': [],
+            'ui_target_id_seq': [],
+            'verb_str_position_seq': [],
+            'input_str_position_seq': [],
+            'obj_desc_position_seq': [],
+        }
         if parse_consumed:
-            feature['consumed_tag'].append(int(action.is_consumed))
-            step_token_pos = string_utils.get_token_pos_from_char_pos(
-                action.instruction_str, action.step_str_pos[0],
-                action.step_str_pos[1])
-            feature['step_str_position_seq'].extend(step_token_pos)
+            feature['consumed_tag'] = []
+            feature['step_str_position_seq'] = []
 
-    for key in feature:
-        feature[key] = np.array(feature[key])
+        for action in synthetic_action_list:
+            if not action.is_valid():
+                continue
+            action.convert_to_lower_case()
+            word_id_seq, char_id_seq = string_utils.tokenize_to_ids(
+                action.instruction_str)
+            # skips the synthetic actions that have more than max_word_num tokens
+            if len(word_id_seq) > max_word_num:
+                logging.info('[Dropped Long Synthetic Action]:%s',
+                             action.instruction_str)
+                continue
+            feature['instruction_str'].append(action.instruction_str)
+            feature['instruction_rule_id'].append(action.action_rule.value)
+            feature['instruction_word_id_seq'].append(word_id_seq)
+            # Enable this when using word token
+            if 'instruction_char_id_seq' in feature:
+                feature['instruction_char_id_seq'].append(char_id_seq)
+            feature['verb_id_seq'].append(action.action_type.value)
+            feature['ui_target_id_seq'].append(action.target_obj_idx)
+            feature['verb_str_position_seq'].extend(
+                string_utils.get_token_pos_from_char_pos(action.instruction_str,
+                                                         action.verb_str_pos[0],
+                                                         action.verb_str_pos[1]))
+            feature['obj_desc_position_seq'].extend(
+                string_utils.get_token_pos_from_char_pos(action.instruction_str,
+                                                         action.obj_str_pos[0],
+                                                         action.obj_str_pos[1]))
+            if action.has_valid_input():
+                feature['input_str_position_seq'].extend(
+                    string_utils.get_token_pos_from_char_pos(action.instruction_str,
+                                                             action.input_str_pos[0],
+                                                             action.input_str_pos[1]))
+            else:
+                feature['input_str_position_seq'].extend(action.input_str_pos)
+            if parse_consumed:
+                feature['consumed_tag'].append(int(action.is_consumed))
+                step_token_pos = string_utils.get_token_pos_from_char_pos(
+                    action.instruction_str, action.step_str_pos[0],
+                    action.step_str_pos[1])
+                feature['step_str_position_seq'].extend(step_token_pos)
 
-    phrase_count = feature['instruction_str'].shape[0]
-    feature_padding_info = {
-        'instruction_str': [phrase_count, np.string_, ''],
-        'instruction_rule_id': [(phrase_count), np.int64, 0],
-        'instruction_word_id_seq': [(phrase_count, max_word_num), np.int64, 0],
-        'verb_id_seq': [(phrase_count), np.int64, 0],
-        'ui_target_id_seq': [(phrase_count), np.int64, 0],
-        'verb_str_position_seq': [(phrase_count * 2), np.int64, 0],
-        'input_str_position_seq': [(phrase_count * 2), np.int64, 0],
-        'obj_desc_position_seq': [(phrase_count * 2), np.int64, 0],
-    }
-    if parse_consumed:
-        feature_padding_info['consumed_tag'] = [(phrase_count), np.int64, 0]
-        feature_padding_info['step_str_position_seq'] = [(phrase_count * 2),
-                                                         np.int64, 0]
+        logging.debug(
+            f"get_synthetic_feature_dict... feature: {feature}")
 
-    padding_shape, padding_type, padding_value = {}, {}, {}
-    for key in feature_padding_info:
-        shape, pad_type, value = feature_padding_info[key]
-        padding_shape[key] = shape
-        padding_type[key] = pad_type
-        padding_value[key] = value
+        for key in feature:
+            # https://www.golinuxcloud.com/setting-an-array-element-with-a-sequence/
+            feature[key] = np.array(feature[key], dtype=object)
 
-    padded_feature_dict = proto_utils.padding_dictionary(feature, padding_shape,
-                                                         padding_type,
-                                                         padding_value)
-    return padded_feature_dict
+        phrase_count = feature['instruction_str'].shape[0]
+        feature_padding_info = {
+            'instruction_str': [phrase_count, np.string_, ''],
+            'instruction_rule_id': [(phrase_count), np.int64, 0],
+            'instruction_word_id_seq': [(phrase_count, max_word_num), np.int64, 0],
+            'verb_id_seq': [(phrase_count), np.int64, 0],
+            'ui_target_id_seq': [(phrase_count), np.int64, 0],
+            'verb_str_position_seq': [(phrase_count * 2), np.int64, 0],
+            'input_str_position_seq': [(phrase_count * 2), np.int64, 0],
+            'obj_desc_position_seq': [(phrase_count * 2), np.int64, 0],
+        }
+        logging.debug(
+            f"get_synthetic_feature_dict... parse_consumed: {parse_consumed}")
+        if parse_consumed:
+            feature_padding_info['consumed_tag'] = [
+                (phrase_count), np.int64, 0]
+            feature_padding_info['step_str_position_seq'] = [(phrase_count * 2),
+                                                             np.int64, 0]
+        logging.debug(
+            f"get_synthetic_feature_dict... feature_padding_info: {feature_padding_info}")
+
+        padding_shape, padding_type, padding_value = {}, {}, {}
+        for key in feature_padding_info:
+            shape, pad_type, value = feature_padding_info[key]
+            padding_shape[key] = shape
+            padding_type[key] = pad_type
+            padding_value[key] = value
+
+        logging.debug(
+            f"get_synthetic_feature_dict... feature, padding_shape, padding_type: {feature}, {padding_shape}, {padding_type}")
+
+        padded_feature_dict = proto_utils.padding_dictionary(feature, padding_shape,
+                                                             padding_type,
+                                                             padding_value)
+        return padded_feature_dict
+    except Exception as e:
+        logging.exception(f">>>> !!! ERROR: {e}")
+        raise e

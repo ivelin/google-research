@@ -21,14 +21,14 @@ source ./bin/activate
 
 pip install -r ./seq2act/data_generation/requirements.txt
 
-mkdir -p ${PWD}"seq2act/data/rico_sca/tfexample"
+mkdir -p ${PWD}"/seq2act/data/rico_sca/tfexample"
 
 python -m seq2act.data_generation.create_android_synthetic_dataset \
---input_dir=${PWD}"gs://pix2struct/pix2struct_data/data/rico_images" \
+--input_dir="gs://pix2struct/pix2struct_data/data/rico_images" \
 --output_dir=${PWD}"/seq2act/data/rico_sca/tfexample" \
 --filter_file=${PWD}"/seq2act/data_generation/filter_24598.txt" \
---thread_num=1 \
---shard_num=1 \
---vocab_file=${PWD}"seq2act/data_generation/commoncrawl_rico_vocab_subtoken_44462" \
---input_candiate_file=${PWD}"seq2act/data_generation/input_candidate_words.txt" \
+--thread_num=8 \
+--shard_num=8 \
+--vocab_file=${PWD}"/seq2act/data_generation/commoncrawl_rico_vocab_subtoken_44462" \
+--input_candiate_file=${PWD}"/seq2act/data_generation/input_candidate_words.txt" \
 --logtostderr
