@@ -381,12 +381,16 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         padding_shape=(ui_object_num, max_word_num, max_word_length),
         lower_case=True)
 
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict padded_obj_feature_dict: {padded_obj_feature_dict}")
+
     actions = synthetic_action_generator.generate_all_actions(
         view_hierarchy_leaf_nodes,
-        action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe'))
+        # action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe')
+    )
 
-    tf.logging.info(
-        f">>>> _get_full_feature_dict... actions: {actions}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... actions count: {len(actions)}")
     if actions and _FILTER_ACTIONS_BY_NAME:
         actions = _filter_synthetic_by_name_overlap(
             actions,
@@ -415,6 +419,8 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
     full_feature['ui_obj_cord_y_seq'] = full_feature['ui_obj_cord_y_seq'] / float(
         screen_height)
 
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... returning full_feature: {full_feature}")
     return full_feature
 
 
@@ -627,14 +633,15 @@ def main(_):
                 writer.write(dist)
                 prtint(f'wrote dist record to {stats_file}: {dist}')
 
-            print(
+            tf.logging.debug(
                 f'\n >>>>>>> Writing to: {stats_file} sums: {sums.items()} \n')
             for key, distribution in sums.items():
                 sums_lines = '%s: %s\n'.format(key, sorted(
                     sums.items(), key=operator.itemgetter(0)))
                 writer.write(sums_lines)
-                prtint(f'wrote sum record to {stats_file}: {dist}')
-        print(f'\n >>>>>>> Finished writing to: {stats_file}\n')
+                tf.logging.debug(
+                    f'wrote sum record to {stats_file}: sums len: {len(sums_lines)}')
+        tf.logging.debug(f'\n >>>>>>> Finished writing to: {stats_file}\n')
 
 
 if __name__ == '__main__':
