@@ -365,10 +365,17 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
             np int array, shape = (phrase_count*2,)
       }
     """
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict from file_path: {file_path}")
+
     view_hierarchy_leaf_nodes = common.get_view_hierarchy_list(file_path)
     ui_obj_list = [ele.uiobject for ele in view_hierarchy_leaf_nodes]
 
     ui_object_num = len(view_hierarchy_leaf_nodes)
+
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict ui_object_num: {ui_object_num}")
+
     padded_obj_feature_dict = proto_utils.get_ui_objects_feature_dict(
         view_hierarchy_leaf_nodes,
         padding_shape=(ui_object_num, max_word_num, max_word_length),
@@ -378,6 +385,8 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         view_hierarchy_leaf_nodes,
         action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe'))
 
+    tf.logging.info(
+        f">>>> _get_full_feature_dict... actions: {actions}")
     if actions and _FILTER_ACTIONS_BY_NAME:
         actions = _filter_synthetic_by_name_overlap(
             actions,
