@@ -41,6 +41,8 @@ from seq2act.data_generation import proto_utils
 from seq2act.data_generation import synthetic_action_generator
 from seq2act.data_generation import view_hierarchy
 
+tf.get_logger().setLevel('DEBUG')
+
 gfile = tf.gfile
 flags = tf.flags
 FLAGS = flags.FLAGS
@@ -108,6 +110,7 @@ distributions = collections.defaultdict(collections.Counter)
 
 
 def _stat_distribution(name, value_list):
+    print(f"_stat_distribution name:{name}, value_list: {value_list}")
     with debug_info_lock:
         # longest_stats[name] = max(longest_stats[name], num)
         for value in value_list:
@@ -118,6 +121,7 @@ sums = collections.defaultdict(int)
 
 
 def _stat_sum(name, num):
+    print(f"_stat_sum name:{name}, num: {num}")
     with debug_info_lock:
         sums[name] += num
 
@@ -456,12 +460,16 @@ def _process_features(tf_record_writer, writer_lock,
       max_word_length: The max length of words in each ui object. synthetic input
         actions.
     """
+    # tf.logging.info(f">>>> Processing features for {file_path}")
     feature_dict = _get_full_feature_dict(
         dataset_type,
         file_path,
         max_word_num,
         max_word_length,
     )
+    tf.logging.info(
+        f">>>> Processing features... feature_dict: {feature_dict}")
+
     phrase_count = feature_dict['instruction_str'].shape[0]
     ui_object_num = feature_dict['ui_obj_str_seq'].shape[0]
 
@@ -495,6 +503,8 @@ def _process_features(tf_record_writer, writer_lock,
     _stat_distribution('target_obj_type',
                        feature_dict['ui_obj_type_id_seq'][target_objs])
 
+    tf.logging.info(
+        f">>>> Processed features into feature_dict {feature_dict}")
     # When feature_dict['verb_id_seq'] is not always padded value, generate
     # tfexample
     if (_assert_feature_shape(feature_dict, expected_feature_shape) and
@@ -502,6 +512,7 @@ def _process_features(tf_record_writer, writer_lock,
         not np.array(feature_dict['verb_id_seq'] ==
                      config.LABEL_DEFAULT_INVALID_INT).all()):
         tf_proto = proto_utils.features_to_tf_example(feature_dict)
+        tf.logging.info(f">>>> Writing to tfrecord: {feature_dict}")
         with writer_lock:
             tf_record_writer.write(tf_proto.SerializeToString())
 
@@ -534,22 +545,29 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
     with concurrent.futures.ThreadPoolExecutor(FLAGS.num_threads) as executor:
         futures = []
         input_dir = "gs://pix2struct/pix2struct_data/data/rico_images"
-        print(f"Data files input dir:: {input_dir}")
+        tf.logging.info(f"Data files input dir:: {input_dir}")
         all_file_path = gfile.Glob(os.path.join(input_dir, '*.xml')) + gfile.Glob(
             os.path.join(input_dir, '*.json'))
 
         all_file_path = filter_file_by_name(all_file_path)
-        print(f"all_file_path, len: {all_file_path}, {len(all_file_path)}")
+        tf.logging.info(
+            f"all_file_path, len: {all_file_path}, {len(all_file_path)}")
         assert len(all_file_path) == 24598
 
-        for file_path in sorted(all_file_path):
+        for file_path in sorted(all_file_path)[:10]:
+            # TODO run through all files when bugs fixed
+            #        for file_path in [all_file_path[0], all_file_path[1]]:
             shard = num_processed_files % FLAGS.num_shards
+            # tf.logging.info("\n\n>>>>>> Appending features: %s",
+            #                 _process_features)
             futures.append(
                 executor.submit(_process_features, tf_record_writers[shard],
                                 writer_locks[shard], dataset_type, file_path,
                                 max_word_num, max_word_length))
             num_processed_files += 1
+        tf.logging.info(">>>> Waiting on thread pool to finish")
         concurrent.futures.wait(futures)
+        tf.logging.info(">>>> Thread pool execytuib finished")
 
     for shard in range(FLAGS.num_shards):
         tf_record_writers[shard].close()
@@ -592,19 +610,22 @@ def main(_):
     stats_file = os.path.join(FLAGS.output_dir, 'stats.txt')
     if FLAGS.file_to_generate == 'tf_example':
         with open(stats_file, 'w+') as writer:
-
-            print(f'\n >>>>>>> Writing to: {stats_file}\n')
+            print(
+                f'\n >>>>>>> Writing to: {stats_file} distributions: {distributions.items()} \n')
             for key, distribution in distributions.items():
                 dist = '%s: %s\n'.format(key, sorted(
                     distribution.items(), key=operator.itemgetter(0)))
                 writer.write(dist)
                 prtint(f'wrote dist record to {stats_file}: {dist}')
 
+            print(
+                f'\n >>>>>>> Writing to: {stats_file} sums: {sums.items()} \n')
             for key, distribution in sums.items():
-                sums = '%s: %s\n'.format(key, sorted(
+                sums_lines = '%s: %s\n'.format(key, sorted(
                     sums.items(), key=operator.itemgetter(0)))
-                writer.write(sums)
+                writer.write(sums_lines)
                 prtint(f'wrote sum record to {stats_file}: {dist}')
+        print(f'\n >>>>>>> Finished writing to: {stats_file}\n')
 
 
 if __name__ == '__main__':

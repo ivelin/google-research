@@ -305,7 +305,9 @@ def _generate_commoncrawl_dataset():
     def sort_dict_by_key(the_dict):
         return sorted(the_dict.items(), key=operator.itemgetter(0))
 
-    with open(os.path.join(FLAGS.output_dir, 'stats.txt'), 'w+') as stat_file:
+    stat_file_path = os.path.join(FLAGS.output_dir, 'stats.txt')
+    with open(stat_file_path, 'w+') as stat_file:
+        print(f"Writing to {stat_file_path}: {string_utils.stat_fix_dict}")
         stat_file.write('stat_fix_dict: %s\n' % string_utils.stat_fix_dict)
         for key, count in sort_dict_by_key(counters):
             stat_file.write('%s: %s\n' % (key, count))
@@ -315,7 +317,9 @@ def _generate_commoncrawl_dataset():
             stat_file.write('%s: %s\n' % (key, sort_dict_by_key(distribution)))
 
     for key, examples in chosen_examples.items():
-        with open(os.path.join(FLAGS.output_dir, key), 'w+') as writer:
+        key_file = os.path.join(FLAGS.output_dir, key)
+        print(f"Writing to {key_file}: {examples}")
+        with open(key_file, 'w+') as writer:
             writer.write('\n'.join(examples))
 
 
