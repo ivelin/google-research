@@ -125,14 +125,12 @@ def get_ui_objects_feature_dict(view_hierarchy_leaf_nodes,
         'ui_obj_str_seq': uiobject's name/content_descriotion/resource_id,
             numpy array of strings.
     """
-    tf.logging.debug(
-        f">>>> get_ui_objects_feature_dict... ")
+    # tf.logging.debug(
+    #     f">>>> get_ui_objects_feature_dict... ")
     ui_object_attributes = _get_ui_object_attributes(view_hierarchy_leaf_nodes,
                                                      lower_case)
-    tf.logging.debug(
-        f">>>> get_ui_objects_feature_dict !!!!!!!!!!!!!!!!!!!!!!!!!! ")
-    tf.logging.debug(
-        f">>>> get_ui_objects_feature_dict... ui_object_attributes: {ui_object_attributes}")
+    # tf.logging.debug(
+    #     f">>>> get_ui_objects_feature_dict... ui_object_attributes: {ui_object_attributes}")
     vh_relations = get_view_hierarchy_leaf_relation(view_hierarchy_leaf_nodes)
     if padding_shape is None:
         merged_features = {}
@@ -282,8 +280,8 @@ def _get_ui_object_attributes(view_hierarchy_leaf_nodes, lower_case=False):
                 'obj_str_seq': np.array(obj_str_sequence, dtype=str),
             }
 
-            tf.logging.debug(
-                f">>>> _get_ui_object_attributes... ui_feature:{ui_feature}")
+            # tf.logging.debug(
+            #     f">>>> _get_ui_object_attributes... ui_feature:{ui_feature}")
 
             return ui_feature
     except Exception as e:

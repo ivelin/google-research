@@ -41,7 +41,7 @@ from seq2act.data_generation import proto_utils
 from seq2act.data_generation import synthetic_action_generator
 from seq2act.data_generation import view_hierarchy
 
-tf.get_logger().setLevel('DEBUG')
+tf.get_logger().setLevel('INFO')
 
 gfile = tf.gfile
 flags = tf.flags
@@ -110,7 +110,7 @@ distributions = collections.defaultdict(collections.Counter)
 
 
 def _stat_distribution(name, value_list):
-    print(f"_stat_distribution name:{name}, value_list: {value_list}")
+    # print(f"_stat_distribution name:{name}, value_list: {value_list}")
     with debug_info_lock:
         # longest_stats[name] = max(longest_stats[name], num)
         for value in value_list:
@@ -121,7 +121,7 @@ sums = collections.defaultdict(int)
 
 
 def _stat_sum(name, num):
-    print(f"_stat_sum name:{name}, num: {num}")
+    # print(f"_stat_sum name:{name}, num: {num}")
     with debug_info_lock:
         sums[name] += num
 
@@ -255,8 +255,8 @@ def _filter_synthetic_by_name_overlap(action_list,
     ]
 
     # Enable when debugging to see invalid synthetic
-    # _stat_distribution('obj_name_invalid_synthetic',
-    #                    [action.instruction_str for action in invalid_actions])
+    _stat_distribution('obj_name_invalid_synthetic',
+                        [action.instruction_str for action in invalid_actions])
     _stat_sum('obj_name_invalid_synthetic', len(invalid_actions))
 
     return valid_actions
@@ -496,8 +496,8 @@ def _process_features(tf_record_writer, writer_lock,
         max_word_num,
         max_word_length,
     )
-    logging.info(
-        f">>>> Processing features... feature_dict: {feature_dict}")
+    # logging.debug(
+    #     f">>>> Processing features... feature_dict: {feature_dict}")
 
     phrase_count = feature_dict['instruction_str'].shape[0]
     ui_object_num = feature_dict['ui_obj_str_seq'].shape[0]
