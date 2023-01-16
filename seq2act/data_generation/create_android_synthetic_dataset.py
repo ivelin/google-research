@@ -386,7 +386,8 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
 
     actions = synthetic_action_generator.generate_all_actions(
         view_hierarchy_leaf_nodes,
-        action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe')
+        action_rules=('all')
+        #        action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe')
     )
 
     # logging.debug(
@@ -531,8 +532,8 @@ def _process_features(tf_record_writer, writer_lock,
     _stat_distribution('target_obj_type',
                        feature_dict['ui_obj_type_id_seq'][target_objs])
 
-    logging.info(
-        f">>>> Processed features into feature_dict {feature_dict}")
+    # logging.debug(
+    #     f">>>> Processed features into feature_dict {feature_dict}")
     # When feature_dict['verb_id_seq'] is not always padded value, generate
     # tfexample
     if (_assert_feature_shape(feature_dict, expected_feature_shape) and
@@ -540,7 +541,7 @@ def _process_features(tf_record_writer, writer_lock,
         not np.array(feature_dict['verb_id_seq'] ==
                      config.LABEL_DEFAULT_INVALID_INT).all()):
         tf_proto = proto_utils.features_to_tf_example(feature_dict)
-        logging.info(f">>>> Writing to tfrecord: {feature_dict}")
+        # logging.info(f">>>> Writing to tfrecord: {feature_dict}")
         with writer_lock:
             tf_record_writer.write(tf_proto.SerializeToString())
 
@@ -578,8 +579,9 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
             os.path.join(input_dir, '*.json'))
 
         all_file_path = filter_file_by_name(all_file_path)
+        total_file_count = len(all_file_path)
         logging.info(
-            f"all_file_path, len: {all_file_path}, {len(all_file_path)}")
+            f"all_file_path, len: {total_file_count}, {total_file_count}")
         assert len(all_file_path) == 24598
 
         for file_path in sorted(all_file_path):
@@ -593,9 +595,13 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
                                 writer_locks[shard], dataset_type, file_path,
                                 max_word_num, max_word_length))
             num_processed_files += 1
-        logging.info(">>>> Waiting on thread pool to finish")
+            if num_processed_files % 100 == 0:
+                logging.info(
+                    f"##### Processed {num_processed_files} out of {total_file_count}. Progress: {num_processed_files/total_file_count:.2f}%")
+
+        logging.debug(">>>> Waiting on thread pool to finish")
         concurrent.futures.wait(futures)
-        logging.info(">>>> Thread pool execytuib finished")
+        logging.debug(">>>> Thread pool execytuib finished")
 
     for shard in range(FLAGS.num_shards):
         tf_record_writers[shard].close()
@@ -641,8 +647,9 @@ def main(_):
             logging.debug(
                 f'\n >>>>>>> Writing to: {stats_file} distributions: {distributions.items()} \n')
             for key, distribution in distributions.items():
-                dist = '%s: %s\n'.format(key, sorted(
-                    distribution.items(), key=operator.itemgetter(0)))
+                sorted_dist = sorted(distribution.items(),
+                                     key=operator.itemgetter(0))
+                dist = f"{key}: {sorted_dist}\n"
                 writer.write(dist)
                 # logging.debug(f'wrote dist record to {stats_file}: {dist}')
 
