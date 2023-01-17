@@ -34,6 +34,7 @@ import logging
 import concurrent.futures
 import numpy as np
 import tensorflow.compat.v1 as tf  # tf
+import re
 
 from seq2act.data_generation import common
 from seq2act.data_generation import config
@@ -41,7 +42,7 @@ from seq2act.data_generation import proto_utils
 from seq2act.data_generation import synthetic_action_generator
 from seq2act.data_generation import view_hierarchy
 
-tf.get_logger().setLevel('INFO')
+tf.get_logger().setLevel('DEBUG')
 
 gfile = tf.gfile
 flags = tf.flags
@@ -110,11 +111,17 @@ distributions = collections.defaultdict(collections.Counter)
 
 
 def _stat_distribution(name, value_list):
-    # print(f"_stat_distribution name:{name}, value_list: {value_list}")
-    with debug_info_lock:
-        # longest_stats[name] = max(longest_stats[name], num)
-        for value in value_list:
-            distributions[name][value] += 1
+    tf.logging.debug(
+        f"_stat_distribution name:{name}, value_list: {value_list}")
+    try:
+        with debug_info_lock:
+            # longest_stats[name] = max(longest_stats[name], num)
+            for value in value_list:
+                distributions[name][value] += 1
+    except Exception as e:
+        logging.exception(e)
+    tf.logging.debug(
+        f"_stat_distribution finished")
 
 
 sums = collections.defaultdict(int)
@@ -255,8 +262,8 @@ def _filter_synthetic_by_name_overlap(action_list,
     ]
 
     # Enable when debugging to see invalid synthetic
-    _stat_distribution('obj_name_invalid_synthetic',
-                        [action.instruction_str for action in invalid_actions])
+    # _stat_distribution('obj_name_invalid_synthetic',
+    #                    [action.instruction_str for action in invalid_actions])
     _stat_sum('obj_name_invalid_synthetic', len(invalid_actions))
 
     return valid_actions
@@ -373,7 +380,7 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
 
     ui_object_num = len(view_hierarchy_leaf_nodes)
 
-    logging.debug(
+    tf.logging.debug(
         f">>>> _get_full_feature_dict ui_object_num: {ui_object_num}")
 
     padded_obj_feature_dict = proto_utils.get_ui_objects_feature_dict(
@@ -381,22 +388,28 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         padding_shape=(ui_object_num, max_word_num, max_word_length),
         lower_case=True)
 
-    logging.debug(
-        f">>>> _get_full_feature_dict padded_obj_feature_dict: {padded_obj_feature_dict}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict padded_obj_feature_dict")  # : {padded_obj_feature_dict}")
 
-    actions = synthetic_action_generator.generate_all_actions(
-        view_hierarchy_leaf_nodes,
-        action_rules=('all')
-        #        action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe')
-    )
+    try:
+        actions = synthetic_action_generator.generate_all_actions(
+            view_hierarchy_leaf_nodes,
+            action_rules=('all'),
+            # action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe'),
+        )
+    except Exception as e:
+        tf.logging.debug(f"!!!! ERROR: {e}")
+        tf.logging.error(f"!!!! ERROR: {e}")
+        logging.exception(e)
+        raise e
 
-    # logging.debug(
-    #     f">>>> _get_full_feature_dict... actions count: {len(actions)}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... actions count: {len(actions)}")
 
-    # logging.debug(
-    #     f">>>> _get_full_feature_dict... _FILTER_ACTIONS_BY_NAME: {_FILTER_ACTIONS_BY_NAME}")
-    # logging.debug(
-    #     f">>>> _get_full_feature_dict... _FILTER_ACTION_BY_TYPE: {_FILTER_ACTION_BY_TYPE}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... _FILTER_ACTIONS_BY_NAME: {_FILTER_ACTIONS_BY_NAME}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... _FILTER_ACTION_BY_TYPE: {_FILTER_ACTION_BY_TYPE}")
 
     if actions and _FILTER_ACTIONS_BY_NAME:
         actions = _filter_synthetic_by_name_overlap(
@@ -408,14 +421,14 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
         actions = _filter_synthetic_by_obj_type(
             ui_obj_list, actions, max_num_syn_per_screen=20)
 
-    # logging.debug(
-    #     f">>>> _get_full_feature_dict... filtered actions count: {len(actions)}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... filtered actions count: {len(actions)}")
 
     padded_syn_feature_dict = synthetic_action_generator.get_synthetic_feature_dict(
         actions, max_word_num, max_word_length)
 
-    # logging.debug(
-    #     f">>>> _get_full_feature_dict... padded_syn_feature_dict: {padded_syn_feature_dict}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... padded_syn_feature_dict")  # : {padded_syn_feature_dict}")
 
     full_feature = {}
     full_feature.update(padded_obj_feature_dict)
@@ -433,8 +446,8 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
     full_feature['ui_obj_cord_y_seq'] = full_feature['ui_obj_cord_y_seq'] / float(
         screen_height)
 
-    # logging.debug(
-    #     f">>>> _get_full_feature_dict... returning full_feature: {full_feature}")
+    tf.logging.debug(
+        f">>>> _get_full_feature_dict... returning full_feature")  # : {full_feature}")
     return full_feature
 
 
@@ -447,21 +460,29 @@ def _assert_feature_value(feature):
         if key in anchor_features:
             continue
         if -1 in feature[key]:
-            logging.info('[FATAL]: Feature %d contains -1', key)
+            tf.logging.error('[FATAL]: Feature %d contains -1', key)
             return False
+    tf.logging.debug('_assert_feature_value returning True for key: %s', key)
     return True
 
 
 def _assert_feature_shape(feature, expected_shape):
     """Asserts feature shape is legal, same as expected_shape."""
-    assert set(feature.keys()) == set(expected_shape.keys(
-    )), '[FATAL] feature keys %s different from expected %s' % (
+    A = set(feature.keys())
+    B = set(expected_shape.keys())
+    tf.logging.debug(
+        f'checking if _assert_feature_shape matches expected shape A-B, B-A: {A-B}, {B-A}')
+    assert A == B, '[FATAL] feature keys %s different from expected %s' % (
         sorted(feature.keys()), sorted(expected_shape.keys()))
+    tf.logging.debug(f'_assert_feature_shape A == B')
     for key in feature:
         if feature[key].shape != expected_shape[key]:
-            logging.info('[FATAL] feature %s shape is different from expected',
-                         key)
+            tf.logging.debug(
+                f'_assert_feature_shape difference in shape for key: {key}')
+            tf.logging.error('[FATAL] feature %s shape %s is different from expected %s',
+                             key, feature[key].shape, expected_shape[key])
             return False
+    tf.logging.debug('_assert_feature_shape returning True for key: %s', key)
     return True
 
 
@@ -489,17 +510,25 @@ def _process_features(tf_record_writer, writer_lock,
       max_word_length: The max length of words in each ui object. synthetic input
         actions.
     """
-    # logging.info(f">>>> Processing features for {file_path}")
+    logging.info(f">>>> Processing features for {file_path}")
     feature_dict = _get_full_feature_dict(
         dataset_type,
         file_path,
         max_word_num,
         max_word_length,
     )
-    # logging.debug(
-    #     f">>>> Processing features... feature_dict: {feature_dict}")
+    image_id = re.search("(\d+).json", file_path)
+    image_id = image_id.group(1)
+    feature_dict['image_id'] = np.array(image_id, dtype=np.string_)
+    tf.logging.debug(
+        f">>>> Processing features... image_id: {image_id}")
+    tf.logging.debug(
+        f">>>> Processing features... feature_dict keys")  # : {feature_dict.keys()}")
 
     phrase_count = feature_dict['instruction_str'].shape[0]
+    tf.logging.debug(
+        f"feature_dict['instruction_str']")  # : {feature_dict['instruction_str']}")
+
     ui_object_num = feature_dict['ui_obj_str_seq'].shape[0]
 
     expected_feature_shape = {
@@ -521,29 +550,59 @@ def _process_features(tf_record_writer, writer_lock,
         'verb_str_position_seq': (phrase_count*2,),
         'input_str_position_seq': (phrase_count*2,),
         'obj_desc_position_seq': (phrase_count*2,),
+        'image_id': ()
     }
+
+    tf.logging.debug(
+        f">>>> _process_features Processed expected_feature_shape")  # {feature_dict}")
 
     _stat_distribution('ui_obj_type_id_seq',
                        feature_dict['ui_obj_type_id_seq'])
+
+    tf.logging.debug(
+        f">>>> _process_features Processed ui_obj_type_id_seq")  # {feature_dict}")
+
     _stat_distribution('verb_id_seq', feature_dict['verb_id_seq'])
+
+    tf.logging.debug(
+        f">>>> _process_features Processed verb_id_seq")  # {feature_dict}")
+
     _stat_distribution('instruction_rule_id',
                        feature_dict['instruction_rule_id'])
+
+    tf.logging.debug(
+        f">>>> _process_features Processed instruction_rule_id")  # {feature_dict}")
+
     target_objs = feature_dict['ui_target_id_seq']
+
+    tf.logging.debug(
+        f">>>> _process_features Processed ui_target_id_seq")  # {feature_dict}")
+
     _stat_distribution('target_obj_type',
                        feature_dict['ui_obj_type_id_seq'][target_objs])
 
-    # logging.debug(
-    #     f">>>> Processed features into feature_dict {feature_dict}")
+    tf.logging.debug(
+        f">>>> _process_features Processed _stat_distribution")  # {feature_dict}")
     # When feature_dict['verb_id_seq'] is not always padded value, generate
     # tfexample
-    if (_assert_feature_shape(feature_dict, expected_feature_shape) and
-        _assert_feature_value(feature_dict) and
-        not np.array(feature_dict['verb_id_seq'] ==
-                     config.LABEL_DEFAULT_INVALID_INT).all()):
-        tf_proto = proto_utils.features_to_tf_example(feature_dict)
-        # logging.info(f">>>> Writing to tfrecord: {feature_dict}")
-        with writer_lock:
-            tf_record_writer.write(tf_proto.SerializeToString())
+    try:
+        tf.logging.debug(f">>>> Checking feature_dict assertions...")
+        if (_assert_feature_shape(feature_dict, expected_feature_shape) and
+            _assert_feature_value(feature_dict) and
+            not np.array(feature_dict['verb_id_seq'] ==
+                         config.LABEL_DEFAULT_INVALID_INT).all()):
+            try:
+                tf.logging.debug(f">>>> Converting features to tf example")
+                tf_proto = proto_utils.features_to_tf_example(feature_dict)
+                tf.logging.debug(f">>>> Writing to tfrecord")
+                with writer_lock:
+                    tf_record_writer.write(tf_proto.SerializeToString())
+            except Exception as e:
+                tf.logging.info(f"ERROR preparing tf example: {e}")
+                raise e
+    except Exception as e:
+        logging.exception(f"ERROR preparing feature_dict: {e}")
+        raise e
 
 
 def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
@@ -584,9 +643,10 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
             f"all_file_path, len: {total_file_count}, {total_file_count}")
         assert len(all_file_path) == 24598
 
-        for file_path in sorted(all_file_path):
-            # TODO run through all files when bugs fixed
-            #        for file_path in [all_file_path[0], all_file_path[1]]:
+        sorted_files = sorted(all_file_path)
+        # TODO run through all files when bugs fixed
+        for file_path in sorted_files[:5]:
+            logging.debug(f"processing file: {file_path}")
             shard = num_processed_files % FLAGS.num_shards
             # logging.info("\n\n>>>>>> Appending features: %s",
             #                 _process_features)
@@ -597,7 +657,7 @@ def _write_dataset(dataset_type, input_dir, output_dir, max_word_num,
             num_processed_files += 1
             if num_processed_files % 100 == 0:
                 logging.info(
-                    f"##### Processed {num_processed_files} out of {total_file_count}. Progress: {num_processed_files/total_file_count:.2f}%")
+                    f"##### Loaded {num_processed_files} out of {total_file_count} input files.")
 
         logging.debug(">>>> Waiting on thread pool to finish")
         concurrent.futures.wait(futures)
@@ -639,19 +699,18 @@ def create_dataset(dataset_type, input_dir, output_dir):
 
 def main(_):
     create_dataset(FLAGS.dataset, FLAGS.input_dir, FLAGS.output_dir)
-
-    logging.info('\n\n%s\n\n', longest_stats)
+    tf.logging.info('\n\n%s\n\n', longest_stats)
     stats_file = os.path.join(FLAGS.output_dir, 'stats.txt')
     if FLAGS.file_to_generate == 'tf_example':
+        tf.logging.debug(
+            f'\n >>>>>>> Writing to: {stats_file} distributions: {distributions.items()} \n')
         with open(stats_file, 'w+') as writer:
-            logging.debug(
-                f'\n >>>>>>> Writing to: {stats_file} distributions: {distributions.items()} \n')
             for key, distribution in distributions.items():
                 sorted_dist = sorted(distribution.items(),
                                      key=operator.itemgetter(0))
                 dist = f"{key}: {sorted_dist}\n"
                 writer.write(dist)
-                # logging.debug(f'wrote dist record to {stats_file}: {dist}')
+                tf.logging.debug(f'wrote dist record to {stats_file}: {dist}')
 
             logging.debug(
                 f'\n >>>>>>> Writing to: {stats_file} sums: {sums.items()} \n')
@@ -659,9 +718,9 @@ def main(_):
                 sums_lines = '%s: %s\n'.format(key, sorted(
                     sums.items(), key=operator.itemgetter(0)))
                 writer.write(sums_lines)
-                # logging.debug(
-                #     f'wrote sum record to {stats_file}: sums len: {len(sums_lines)}')
-        logging.debug(f'\n >>>>>>> Finished writing to: {stats_file}\n')
+                tf.logging.debug(
+                    f'wrote sum record to {stats_file}: sums len: {len(sums_lines)}')
+        tf.logging.debug(f'\n >>>>>>> Finished writing to: {stats_file}\n')
 
 
 if __name__ == '__main__':
