@@ -394,12 +394,11 @@ def _get_full_feature_dict(dataset_type, file_path, max_word_num,
     try:
         actions = synthetic_action_generator.generate_all_actions(
             view_hierarchy_leaf_nodes,
-            action_rules=('all'),
+            # action_rules=('all'),
+            action_rules=('single', 'screen_loc', 'neighbor_loc'),
             # action_rules=('single', 'screen_loc', 'neighbor_loc', 'swipe'),
         )
     except Exception as e:
-        tf.logging.debug(f"!!!! ERROR: {e}")
-        tf.logging.error(f"!!!! ERROR: {e}")
         logging.exception(e)
         raise e
 
