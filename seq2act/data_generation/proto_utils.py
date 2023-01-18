@@ -29,6 +29,7 @@ import io
 import numpy as np
 from PIL import Image
 import tensorflow.compat.v1 as tf
+import logging
 
 from seq2act.data_generation import string_utils
 from seq2act.data_generation import view_hierarchy
@@ -81,7 +82,8 @@ def get_feature_dict(screen_info_proto, padding_shape=None, lower_case=False):
     view_hierarchy_leaf_nodes = vh.get_leaf_nodes()
 
     ui_object_features_dict = get_ui_objects_feature_dict(
-        view_hierarchy_leaf_nodes, padding_shape, lower_case)
+        #        view_hierarchy_leaf_nodes, padding_shape, lower_case)
+        view_hierarchy_leaf_nodes, padding_shape=padding_shape, lower_case=lower_case)
     ui_object_features_dict['screenshot'] = screenshot
 
     return ui_object_features_dict
@@ -125,16 +127,36 @@ def get_ui_objects_feature_dict(view_hierarchy_leaf_nodes,
         'ui_obj_str_seq': uiobject's name/content_descriotion/resource_id,
             numpy array of strings.
     """
-    tf.logging.debug(
-        f">>>> get_ui_objects_feature_dict... ")
+    # tf.logging.debug(
+    #     f">>>> get_ui_objects_feature_dict... ")
+
+    # tf.logging.debug(
+    #     f">>>> get_ui_objects_feature_dict... padding_shape: {padding_shape}")
+
+    # tf.logging.debug(
+    #     f">>>> get_ui_objects_feature_dict... view_hierarchy_leaf_nodes: {view_hierarchy_leaf_nodes}")
+
     ui_object_attributes = _get_ui_object_attributes(view_hierarchy_leaf_nodes,
                                                      lower_case)
     # tf.logging.debug(
     #     f">>>> get_ui_objects_feature_dict... ui_object_attributes: {ui_object_attributes}")
+
+    # tf.logging.debug(
+    #     f">>>> \n\n\n\n@@@@@@@ get_ui_objects_feature_dict... @@@@@@@\n\n\n\n")
     vh_relations = get_view_hierarchy_leaf_relation(view_hierarchy_leaf_nodes)
+    # tf.logging.debug(
+    #     f">>>> \n\n\n\n###### get_ui_objects_feature_dict... ##########\n\n\n\n")
+
     if padding_shape is None:
         merged_features = {}
+        # tf.logging.debug(
+        #     f">>>> !!!!!!!\n\n\n\n!!!!!!!! get_ui_objects_feature_dict... padding_shape is None !!!!!!!\n\n\n\n!!!!!!!!")
         for key in ui_object_attributes:
+            # if key in ['cord_x_seq', 'cord_y_seq']:
+            # tf.logging.debug(
+            #     f">>>> get_ui_objects_feature_dict... LeafNode {key} : {ui_object_attributes[key]}")
+            # tf.logging.debug(
+            #     f">>>> get_ui_objects_feature_dict... ui_object_attributes: {ui_object_attributes}")
             if key == 'obj_str_seq':
                 merged_features['ui_obj_str_seq'] = ui_object_attributes[key].copy()
             else:
@@ -144,6 +166,8 @@ def get_ui_objects_feature_dict(view_hierarchy_leaf_nodes,
             merged_features['ui_obj_' + key] = vh_relations[key].copy()
         return merged_features
     else:
+        # tf.logging.debug(
+        #     f">>>> \n\n\n\n------------ get_ui_objects_feature_dict... padding_shape is NOT None -------------\n\n\n\n")
         if not isinstance(padding_shape, tuple):
             assert False, 'padding_shape %s is not a tuple.' % (
                 str(padding_shape))
@@ -188,8 +212,8 @@ def get_ui_objects_feature_dict(view_hierarchy_leaf_nodes,
             padding_array(ui_object_attributes['dom_location_seq'],
                           (max_object_num * 3,)),
     }
-    tf.logging.debug(
-        f">>>> get_ui_objects_feature_dict returning obj_feature_dict ")
+    # tf.logging.debug(
+    #     f">>>> get_ui_objects_feature_dict returning obj_feature_dict ")
     return obj_feature_dict
 
 
@@ -212,8 +236,8 @@ def _get_ui_object_attributes(view_hierarchy_leaf_nodes, lower_case=False):
         index, post-order-traversal index.
         'word_str_sequence': numpy array of ui object name strings.
     """
-    tf.logging.debug(
-        f">>>> _get_ui_object_attributes... lower_case:{lower_case}")
+    # tf.logging.debug(
+    #     f">>>> _get_ui_object_attributes... lower_case:{lower_case}")
     type_sequence = []
     word_id_sequence = []
     char_id_sequence = []
@@ -248,46 +272,25 @@ def _get_ui_object_attributes(view_hierarchy_leaf_nodes, lower_case=False):
             word_id_sequence.append(word_ids)
             char_id_sequence.append(char_ids)
 
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... word_sequence: {word_sequence}")
+        # tf.logging.debug(
+        #     f">>>> _get_ui_object_attributes... word_id_sequence: {word_id_sequence}")
 
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... type_sequence: {np.array(type_sequence)})")
+        ui_feature = {
+            'type_id_seq': np.array(type_sequence),
+            'word_id_seq': np.array(word_id_sequence, dtype=object),
+            'clickable_seq': np.array(clickable_sequence),
+            'cord_x_seq': np.array(cord_x_sequence),
+            'cord_y_seq': np.array(cord_y_sequence),
+            'dom_location_seq': np.array(dom_location_sequence),
+            'obj_str_seq': np.array(obj_str_sequence, dtype=str),
+        }
 
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... word_id_sequence: {np.array(word_id_sequence)}")
+        # tf.logging.debug(
+        #     f">>>> _get_ui_object_attributes... returning ui_feature")  # :{ui_feature}")
 
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... clickable_sequence: {np.array(clickable_sequence)}")
-
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... cord_x_sequence: {np.array(cord_x_sequence)}")
-
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... cord_y_sequence: {np.array(cord_y_sequence)}")
-
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... dom_location_sequence: {np.array(dom_location_sequence)}")
-
-            # tf.logging.debug(
-            #     f">>>> _get_ui_object_attributes... obj_str_sequence: {np.array(obj_str_sequence)}")
-
-            ui_feature = {
-                'type_id_seq': np.array(type_sequence),
-                'word_id_seq': np.array(word_id_sequence),
-                'clickable_seq': np.array(clickable_sequence),
-                'cord_x_seq': np.array(cord_x_sequence),
-                'cord_y_seq': np.array(cord_y_sequence),
-                'dom_location_seq': np.array(dom_location_sequence),
-                'obj_str_seq': np.array(obj_str_sequence, dtype=str),
-            }
-
-            tf.logging.debug(
-                f">>>> _get_ui_object_attributes... returning ui_feature")  # :{ui_feature}")
-
-            return ui_feature
+        return ui_feature
     except Exception as e:
-        tf.logging.error(f">>>> !!!!! ERROR: {e}")
+        logging.exception(f">>>> !!!!! ERROR: {e}")
         raise e
 
 
