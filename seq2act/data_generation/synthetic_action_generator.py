@@ -189,7 +189,7 @@ def generate_all_actions(view_hierarchy_leaf_nodes, action_rules=('all')):
     Returns:
       A list of common.Action instances.
     """
-    tf.logging.debug(f"generate_all_actions ...")
+    # tf.logging.debug(f"generate_all_actions ...")
     # tf.logging.debug(
     #     f"generate_all_actions view_hierarchy_leaf_nodes: {view_hierarchy_leaf_nodes}, action_rules: {action_rules}")
 
@@ -197,42 +197,42 @@ def generate_all_actions(view_hierarchy_leaf_nodes, action_rules=('all')):
     vh_relation = proto_utils.get_view_hierarchy_leaf_relation(
         view_hierarchy_leaf_nodes)
 
-    tf.logging.debug(
-        f"generate_all_actions vh_relation")
+    # tf.logging.debug(
+    #     f"generate_all_actions vh_relation")
 
     action_list = []
     if 'all' in action_rules or 'single' in action_rules:
         action_list.extend(
             _generate_single_object_actions(ui_object_list, Platform.ANDROID))
 
-    tf.logging.debug(
-        f"generate_all_actions single")
+    # tf.logging.debug(
+    #     f"generate_all_actions single")
 
     if 'all' in action_rules or 'screen_loc' in action_rules:
         action_list.extend(_generate_absolute_location_action(ui_object_list))
 
-    tf.logging.debug(
-        f"generate_all_actions screen_loc")
+    # tf.logging.debug(
+    #     f"generate_all_actions screen_loc")
 
     if 'all' in action_rules or 'neighbor_loc' in action_rules:
         action_list.extend(
             _generate_relative_location_action(ui_object_list,
                                                vh_relation['v_distance'],
                                                vh_relation['h_distance']))
-    tf.logging.debug(
-        f"generate_all_actions neighbor_loc")
+    # tf.logging.debug(
+    #     f"generate_all_actions neighbor_loc")
 
     if 'all' in action_rules or 'swipe' in action_rules:
         action_list.extend(_generate_swipe_actions(ui_object_list))
 
-    tf.logging.debug(
-        f"generate_all_actions swipe")
+    # tf.logging.debug(
+    #     f"generate_all_actions swipe")
 
     if 'all' in action_rules or 'no_verb' in action_rules:
         action_list.extend(_generate_no_verb_actions(ui_object_list))
 
-    tf.logging.debug(
-        f"generate_all_actions returning action_list")
+    # tf.logging.debug(
+    #     f"generate_all_actions returning action_list")
     return action_list
 
 
